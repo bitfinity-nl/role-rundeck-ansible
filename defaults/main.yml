@@ -1,0 +1,68 @@
+---
+# Title: role-rundeck
+#
+# Author: bitfinity-nl
+# File: defaults/main.yml
+#
+# Description:
+#   Rundeck is automated runbooks that work the way you want to work. 
+
+
+# -- MariaDB server settings --
+#
+# Variable(s):
+#   mariadb_administrative_account  : 'root' 
+#   mariadb_administrative_password : 'password'
+#  
+mariadb_administrative_account  : 'root' 
+mariadb_administrative_password : '{{ def_mysql_pass }}'
+
+
+# -- MariaDB database settings --
+#
+# Variable(s):
+#   mariadb_db_name : '<database_name>'  # Set the database name.
+#   mariadb_db_user : '<database_user>'  # Set the database username.
+#   mariadb_db_pass : '<database_pass>'  # Set the database password.
+# 
+mariadb_db_name : 'rundeck'
+mariadb_db_user : 'rundeck'
+mariadb_db_pass : 'AllHands0nD3ck'
+
+
+# -- Rundeck settings --
+#
+# Variable(s):
+#   rundeck_url : 'http://192.168.122.10:4440/'  
+#
+# Comment:
+#   Don't forget to close the url with the / and 
+#   check if it's http or http(s) or it wil break
+#   the plugin store. 
+#
+#rundeck_url : 'https://{{ ansible_hostname }}/'
+rundeck_url : 'https://{{ ansible_host }}/'
+
+
+# -- Apache2 reverse proxy --
+#
+# Variable(s):
+#   gitea_apache2_domain         : 'git.example.com'
+#   gitea_apache2_cert_file      : '/etc/apache2/ssl/2_guacamole.domain.com.crt'
+#   gitea_apache2_cert_keyfile   : '/etc/apache2/ssl/guac.key'
+#   guac_apache2_cert_chainfile : '/etc/apache2/ssl/1_root_bundle.crt'
+#
+rundeck_apache2_domain         : '{{ rundeck_url }}'
+rundeck_apache2_cert_file      : '{{ def_ap_sslcertificatefile }}'
+rundeck_apache2_cert_keyfile   : '{{ def_ap_sslcertificatekeyfile }}'
+rundeck_apache2_cert_chainfile : '{{ def_ap_sslcertificatechainfile }}'
+
+
+# -- Rundeck Ansibe plugin --
+#
+#
+#
+rundeck_ansible_plugin_url     : 'https://github.com/Batix/rundeck-ansible-plugin/releases/download/3.1.0/ansible-plugin-3.1.0.jar'
+rundeck_ansible_plugin_file    : 'ansible-plugin-3.1.0.jar'
+rundeck_ansible_user           : 'ansible'
+rundeck_ansible_group          : '{{ rundeck_ansible_user }}'

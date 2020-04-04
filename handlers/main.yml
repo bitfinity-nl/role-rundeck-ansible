@@ -1,0 +1,15 @@
+---
+# Title: role-rundeck
+#
+# Author: bitfinity-nl
+# File: handlers/rundeck.yml
+#
+# Description:
+#   Rundeck is automated runbooks that work the way you want to work. 
+
+- name: "restart_apache2"
+  systemd:
+    state: restarted
+    daemon_reload: yes
+    enabled: yes
+    name: apache2

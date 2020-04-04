@@ -1,0 +1,39 @@
+---
+# Title: role-rundeck
+#
+# Author: bitfinity-nl
+# File: tasks/main.yml
+#
+# Description:
+#   Rundeck is automated runbooks that work the way you want to work.
+
+- name: "Install Ansible-core"
+  import_tasks: ansible-core.yml
+  when:
+    - ansible_distribution_version == "18.04"
+    - ansible_architecture == "x86_64"
+
+- name: "Install MariaDB server"
+  import_tasks: mariadb-server.yml
+  when:
+    - ansible_distribution_version == "18.04"
+    - ansible_architecture == "x86_64"
+
+- name: "Install MariaDB database"
+  import_tasks: mariadb-database.yml
+  when:
+    - ansible_distribution_version == "18.04"
+    - ansible_architecture == "x86_64"
+
+- name: "Install rundeck"
+  import_tasks: rundeck.yml
+  when:
+    - ansible_distribution_version == "18.04"
+    - ansible_architecture == "x86_64"
+
+- name: "Install Apache2"
+  import_tasks: apache2.yml
+  when:
+    - ansible_distribution_version == "18.04"
+    - ansible_architecture == "x86_64"
+

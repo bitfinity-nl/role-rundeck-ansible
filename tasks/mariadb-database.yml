@@ -1,0 +1,32 @@
+---
+# Title: role-rundeck
+#
+# Author: bitfinity-nl
+# File: tasks/mariadb.yml
+#
+# Description:
+#   Rundeck is automated runbooks that work the way you want to work.
+
+- name: "Transfer template(s) to system"
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+  with_items:
+    - { src: 'mariadb/50-server.cnf.j2', dest: '/etc/mysql/mariadb.conf.d/50-server.cnf' }
+
+- name: "Create MariaDB database {{ mariadb_db_name }}"
+  mysql_db:
+    name: "{{ mariadb_db_name }}"
+    encoding: utf8
+    state: present
+    login_user: "{{ mariadb_administrative_account }}"
+    login_password: "{{ mariadb_administrative_password }}"
+
+- name: "Create MariaDB database user {{ mariadb_db_user }} for database {{ mariadb_db_name }}"
+  mysql_user:
+    name: "{{ mariadb_db_user }}"
+    password: "{{ mariadb_db_pass }}"
+    priv: "{{ mariadb_db_user }}.*:ALL,GRANT"
+    state: present
+    login_user: "{{ mariadb_administrative_account }}"
+    login_password: "{{ mariadb_administrative_password }}"

@@ -1,0 +1,85 @@
+---
+# Title: role-rundeck
+#
+# Author: bitfinity-nl
+# File: tasks/rundeck.yml
+#
+# Description:
+#   Rundeck is automated runbooks that work the way you want to work. 
+
+
+- name: "Add Apt key"
+  apt_key:
+    url: https://bintray.com/user/downloadSubjectPublicKey?username=bintray
+    state: present
+
+- name: "Add Rundeck repository"
+  apt_repository:
+    repo: deb https://rundeck.bintray.com/rundeck-deb /
+    state: present
+    filename: rundeck.list
+
+- name: "Update repositories"
+  apt:
+    update_cache: yes
+
+- name: "Install packages"
+  apt:
+    name: "{{ packages }}"
+    state: present
+  vars:
+    packages:
+    - python3-pip
+    - libssl-dev
+    - libkrb5-dev
+    - openjdk-8-jdk-headless
+    - rundeck
+
+#- name: "Install pythn packages"
+#  pip:
+#    name: ansible pywinrm[kerberos] pyvmomi
+
+- name: "Change URL"
+  replace:
+    path: /etc/rundeck/rundeck-config.properties
+    regexp: '.*grails.serverURL=.*'
+    replace: 'grails.serverURL={{ rundeck_url }}'
+    
+- name: "Disable internal database"
+  replace:
+    path: /etc/rundeck/rundeck-config.properties
+    regexp: 'dataSource.url = jdbc:h2:file:/var/lib/rundeck/data/rundeckdb;MVCC=true'
+    replace: '#dataSource.url = jdbc:h2:file:/var/lib/rundeck/data/rundeckdb;MVCC=true'
+
+- name: "Configure Rundeck for url in file /etc/rundeck/framework.properties"
+  replace:
+    path: /etc/rundeck/framework.properties
+    regexp: "{{ item.find }}"
+    replace: "{{ item.replace}}"
+  with_items:
+    - { find: 'framework.server.name =.*', replace: 'framework.server.name = 127.0.0.1' }
+    - { find: 'framework.server.hostname =.*', replace: 'framework.server.hostname = 127.0.0.1' }
+    - { find: 'framework.server.url =.*', replace: 'framework.server.url = http://127.0.0.1' }
+
+- name: "Configure Rundeck for MariaDB in file /etc/rundeck/rundeck-config.properties"
+  blockinfile:
+    path: /etc/rundeck/rundeck-config.properties
+    insertafter: "dataSource.dbCreate = update"
+    block: |
+      dataSource.url=jdbc:mysql://localhost/{{ mariadb_db_name }}?autoReconnect=true&useSSL=false
+      dataSource.username={{ mariadb_db_user }}
+      dataSource.password={{ mariadb_db_pass }}
+      dataSource.driverClassName=com.mysql.jdbc.Driver
+
+#      rundeck.projectsStorageType=db
+
+- name: "Download Rundeck Ansible plugin"
+  get_url:
+    url: "{{ rundeck_ansible_plugin_url }}"
+    dest: "/var/lib/rundeck/libext/{{ rundeck_ansible_plugin_file }}"
+
+- name: "Make sure a service is running"
+  systemd:
+    state: started
+    enabled: yes
+    name: rundeckd

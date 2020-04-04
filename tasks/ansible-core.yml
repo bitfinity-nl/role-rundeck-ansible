@@ -1,0 +1,151 @@
+---
+# Title: role-rundeck
+#
+# Author: bitfinity-nl
+# File: tasks/ansible-core.yml
+#
+# Description:
+#   Rundeck is automated runbooks that work the way you want to work. 
+
+- name: "Add Ansible repository"
+  apt_repository:
+    repo: ppa:ansible/ansible
+
+- name: "Install packages"
+  apt:
+    name: "{{ packages }}"
+    update_cache: yes
+    state: present
+  vars:
+    packages:
+    - ansible
+
+- name: "Create {{ rundeck_ansible_group }} group for user {{ rundeck_ansible_user }}"
+  group:
+    name: "{{ rundeck_ansible_group }}"
+    state: present
+
+- name: "Create user {{ rundeck_ansible_user }} for application Ansible"
+  user:
+    name: "{{ rundeck_ansible_user }}"
+    comment: "User {{ rundeck_ansible_user }} for ansible"
+    shell: /bin/bash
+    group: "{{ rundeck_ansible_group }}"
+    groups: sudo
+    create_home: yes
+
+- name: "Add {{ rundeck_ansible_user }} to the sudoers"
+  template:
+    src: ansible/ansible.j2
+    dest: /etc/sudoers.d/{{ rundeck_ansible_user }}
+    owner: root
+    group: root
+    mode: 0440
+
+- name: "Generate temporary password for user {{ rundeck_ansible_user }}"
+  command: "mkpasswd --method=sha-512 {{ def_ubt_pass }}"
+  register: encrypted_password
+  delegate_to: 127.0.0.1
+
+- name: "Set temporary password for user {{ rundeck_ansible_user }}"
+  user:
+    name: "{{ rundeck_ansible_user }}"
+    comment: local administrative account
+    password: "{{ encrypted_password.stdout }}"
+    update_password: always
+
+- name: "Create .ssh directory structure"
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ rundeck_ansible_user }}"
+    group: "{{ rundeck_ansible_group }}"
+  with_items:
+    - "/home/{{ rundeck_ansible_user }}/.ssh"
+
+- name: "Generate RSA keypair for user {{ rundeck_ansible_user }}"
+  openssh_keypair:
+    path: "/home/{{ rundeck_ansible_user }}/.ssh/id_rsa"
+    size: 4096
+    state: present
+    owner: "{{ rundeck_ansible_user }}"
+    group: "{{ rundeck_ansible_group }}"
+    mode: 0600
+
+#- name: "Find all files in directory /tmp and put them in a variable"
+#  find:
+#    paths: "/tmp/"
+#  register: found
+
+#- name: "Display all downloaded e-mails in directory /tmp from variable"
+#  debug:
+#    msg: "{{ item.path }}"
+#  with_items: "{{ found.files }}"
+
+- name: "Transfer public key from {{ ansible_hostname }} to target {{ ansible_hostname }} (ssh-copy-id) by running command as remote user {{ rundeck_ansible_user }}"
+  #command: sshpass -p {{ def_ubt_pass }} ssh-copy-id -o StrictHostKeyChecking=no sysadmin@{{ ansible_hostname }}
+  command: sshpass -p {{ def_ubt_pass }} ssh-copy-id -o StrictHostKeyChecking=no {{ rundeck_ansible_user }}@{{ ansible_hostname }}
+  remote_user: "{{ rundeck_ansible_user }}"
+  become_user: "{{ rundeck_ansible_user }}"
+  become_method: su
+
+- name: "Remove password from user {{ rundeck_ansible_user }}"
+  user:
+    name: "{{ rundeck_ansible_user }}"
+    comment: local administrative account
+    password: ""
+    update_password: always
+
+- name: "Create Ansible-core directory structure"
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ rundeck_ansible_user }}"
+    group: "{{ rundeck_ansible_group }}"
+    mode: 0770
+  with_items:
+    - "/home/{{ rundeck_ansible_user }}/ansible-core"
+    - "/home/{{ rundeck_ansible_user }}/ansible-core/group_vars"
+    - "/home/{{ rundeck_ansible_user }}/ansible-core/roles"
+
+- name: "Copy ansible files to /home/{{ rundeck_ansible_user }}/ansible-core"
+  copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: "{{ rundeck_ansible_user }}"
+    group: "{{ rundeck_ansible_group }}"
+    mode: 0660
+    remote_src: yes
+  with_items:
+    - { src: '/etc/ansible/ansible.cfg', dest: '/home/{{ rundeck_ansible_user }}/ansible-core/ansible.cfg', desc: 'Copy file /etc/ansible/ansible.cfg to /home/{{ rundeck_ansible_user }}/ansible-core/ansible.cfg'}
+
+- name: "Configure inventory file for Ansible in config file /home/{{ rundeck_ansible_user }}/ansible-core/ansible.cfg"
+  replace:
+    path: /home/{{ rundeck_ansible_user }}/ansible-core/ansible.cfg
+    regexp: '#inventory      = \/etc\/ansible\/hosts'
+    replace: 'inventory      = /home/{{ rundeck_ansible_user }}/ansible-core/hosts'  
+
+- name: "Create Ansible hosts inventory file"
+  file:
+    path: /home/{{ rundeck_ansible_user }}/ansible-core/hosts
+    state: touch
+    owner: "{{ rundeck_ansible_user }}"
+    group: "{{ rundeck_ansible_group }}"
+    mode: 0660
+
+- name: "Configure Ansible inventory file /home/{{ rundeck_ansible_user }}/ansible-core/hosts"
+  blockinfile:
+    path: "/home/{{ rundeck_ansible_user }}/ansible-core/hosts"
+    block: |
+      [control]
+      {{ ansible_hostname }}
+
+- name: "Configure firewall (UFW)"
+  ufw:
+    rule: allow
+    name: OpenSSH
+
+- name: "Enable firewall (UFW)"
+  ufw:
+    state: enabled
+    policy: allow
