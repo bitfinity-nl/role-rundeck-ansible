@@ -33,6 +33,10 @@
     group: "{{ rundeck_ansible_group }}"
     groups: sudo
     create_home: yes
+    generate_ssh_key: yes
+    ssh_key_bits: 2048
+    ssh_key_file: .ssh/id_rsa
+
 
 - name: "Add {{ rundeck_ansible_user }} to the sudoers"
   template:
@@ -54,23 +58,23 @@
     password: "{{ encrypted_password.stdout }}"
     update_password: always
 
-- name: "Create .ssh directory structure"
-  file:
-    path: "{{ item }}"
-    state: directory
-    owner: "{{ rundeck_ansible_user }}"
-    group: "{{ rundeck_ansible_group }}"
-  with_items:
-    - "/home/{{ rundeck_ansible_user }}/.ssh"
+#- name: "Create .ssh directory structure"
+#  file:
+#    path: "{{ item }}"
+#    state: directory
+#    owner: "{{ rundeck_ansible_user }}"
+#    group: "{{ rundeck_ansible_group }}"
+#  with_items:     
+#    - "/home/{{ rundeck_ansible_user }}/.ssh"
 
-- name: "Generate RSA keypair for user {{ rundeck_ansible_user }}"
-  openssh_keypair:
-    path: "/home/{{ rundeck_ansible_user }}/.ssh/id_rsa"
-    size: 4096
-    state: present
-    owner: "{{ rundeck_ansible_user }}"
-    group: "{{ rundeck_ansible_group }}"
-    mode: 0600
+#- name: "Generate RSA keypair for user {{ rundeck_ansible_user }}"
+#  openssh_keypair:
+#    path: "/home/{{ rundeck_ansible_user }}/.ssh/id_rsa"
+#    size: 4096
+#    state: present
+#    owner: "{{ rundeck_ansible_user }}"
+#    group: "{{ rundeck_ansible_group }}"
+#    mode: 0600
 
 #- name: "Find all files in directory /tmp and put them in a variable"
 #  find:
@@ -83,11 +87,7 @@
 #  with_items: "{{ found.files }}"
 
 - name: "Transfer public key from {{ ansible_hostname }} to target {{ ansible_hostname }} (ssh-copy-id) by running command as remote user {{ rundeck_ansible_user }}"
-  #command: sshpass -p {{ def_ubt_pass }} ssh-copy-id -o StrictHostKeyChecking=no sysadmin@{{ ansible_hostname }}
-  command: sshpass -p {{ def_ubt_pass }} ssh-copy-id -o StrictHostKeyChecking=no {{ rundeck_ansible_user }}@{{ ansible_hostname }}
-  remote_user: "{{ rundeck_ansible_user }}"
-  become_user: "{{ rundeck_ansible_user }}"
-  become_method: su
+  command: sudo su -c "sshpass -p {{ def_ubt_pass }} ssh-copy-id -o StrictHostKeyChecking=no {{ rundeck_ansible_user }}@{{ ansible_hostname }}" -s /bin/sh rundeck
 
 - name: "Remove password from user {{ rundeck_ansible_user }}"
   user:

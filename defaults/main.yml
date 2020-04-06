@@ -64,5 +64,5 @@ rundeck_apache2_cert_chainfile : '{{ def_ap_sslcertificatechainfile }}'
 #
 rundeck_ansible_plugin_url     : 'https://github.com/Batix/rundeck-ansible-plugin/releases/download/3.1.0/ansible-plugin-3.1.0.jar'
 rundeck_ansible_plugin_file    : 'ansible-plugin-3.1.0.jar'
-rundeck_ansible_user           : 'ansible'
+rundeck_ansible_user           : 'rundeck'
 rundeck_ansible_group          : '{{ rundeck_ansible_user }}'
